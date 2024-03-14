@@ -1,0 +1,15 @@
+module image_read();
+parameter sizeOfWidth = 8;   // data width
+parameter sizeOfLengthReal = 307200;
+parameter INFILE  = "C:\Users\auroa\Downloads\testPic.hex";
+
+reg [7 : 0]   total_memory [0 : sizeOfLengthReal-1];// memory to store  8-bit data image
+//-------------------------------------------------//
+// -------- Reading data from input file ----------//
+//-------------------------------------------------//
+initial begin
+    $readmemh(INFILE,total_memory,0,sizeOfLengthReal-1); // read file from INFILE
+end
+
+
+endmodule
