@@ -7,6 +7,7 @@ reg [7 : 0]   total_memory [0 : sizeOfLengthReal-1];// memory to store  8-bit da
 //-------------------------------------------------//
 // -------- Reading data from input file ----------//
 //-------------------------------------------------//
+//
 initial begin
     $readmemh(INFILE,total_memory,0,sizeOfLengthReal-1); // read file from INFILE
 end
