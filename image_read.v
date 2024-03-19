@@ -1,6 +1,6 @@
 module image_read();
 parameter sizeOfWidth = 8;   // data width
-parameter sizeOfLengthReal = 307200;
+parameter sizeOfLengthReal = 307200; //total data bytes
 parameter INFILE  = "D:/Coding/MATLAB/testPic.hex";
 parameter OUTFILE  = "D:/Coding/MATLAB/testPicOut.hex";
 reg [7 : 0]   total_memory [0 : sizeOfLengthReal-1];// memory to store  8-bit data image
