@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module sobel(input clk_i, input rst_i, input ack_i, input stb_i, input adr_i, input [31:0] dat_i, input cyc_i, input we_i, output reg cyc_o, output stb_o, output reg we_o, output wire [31:0] adr_o,output reg ack_o, output reg dat_o, output  int_req);
+module sobel(input clk_i, input rst_i, input ack_i, input stb_i, input [1:0] adr_i, input [31:0] dat_i, input cyc_i, input we_i, output reg cyc_o, output stb_o, output reg we_o, output wire [21:0] adr_o,output reg ack_o, output reg [31:0] dat_o, output  int_req);
 // Computation datapath signals
 reg [19:0] O_base;
 reg [19:0] O_offset;
@@ -64,6 +64,9 @@ reg shift_en;
 reg row_cnt_en, col_cnt_en;
 reg O_offset_cnt_en, D_offset_cnt_en;
 reg int_en, done_set, done;
+wire [19:0] O_prev_addr;
+wire [19:0] O_curr_addr;
+wire [19:0] O_next_addr;
 always @(posedge clk_i) // Row counter
 if (row_reset) row <= 0;
 else if (row_cnt_en) row <= row + 1;
@@ -141,7 +144,10 @@ else next_state = read_prev;
 end
 read_next: begin
 next_row_load = 1'b1;cyc_o = 1'b1;
-if (ack_i) next_state = comp1;
+if (ack_i) begin
+next_state = comp1;
+O_offset_cnt_en = 1'b1;
+end
 else next_state = read_next;
 end
 comp1: begin
@@ -166,6 +172,7 @@ cyc_o = 1'b1; we_o = 1'b1;
 if (ack_i) begin
 col_cnt_en = 1'b1; D_offset_cnt_en = 1'b1;
 next_state = read_prev;
+//$display("yo");
 end
 else next_state = write_result;
 end
@@ -231,24 +238,24 @@ endfunction
 
 always @(posedge clk_i) // Computation pipeline
 if (shift_en) begin
-D = abs(Dx) + abs(Dy);
+D =  abs(Dy)+abs(Dx);
 abs_D <= D[10:3];
-Dx <= - $signed({3'b000, O[-1][-1]}) // – 1 * 0[-1][-1]
+Dx <= - $signed({3'b000, O[-1][-1]}) // - 1 * 0[-1][-1]
  + $signed({3'b000, O[-1][+1]}) // + 1 * 0[-1][+1]
- - ($signed({3'b000, O[ 0][-1]}) // – 2 * 0[ 0][-1]
+ - ($signed({3'b000, O[ 0][-1]}) // - 2 * 0[ 0][-1]
  << 1)
  + ($signed({3'b000, O[ 0][+1]}) // + 2 * 0[ 0][+1]
  << 1)
- - $signed({3'b000, O[+1][-1]}) // – 1 * 0[+1][-1]
+ - $signed({3'b000, O[+1][-1]}) // - 1 * 0[+1][-1]
  + $signed({3'b000, O[+1][+1]}); // + 1 * 0[+1][+1]
 Dy <= $signed({3'b000, O[-1][-1]}) // + 1 * O[-1][-1]
  + ($signed({3'b000, O[-1][ 0]}) // + 2 * 0[-1][ 0]
  << 1)
  + $signed({3'b000, O[-1][+1]}) // + 1 * 0[-1][+1]
- - $signed({3'b000, O[+1][-1]}) // – 1 * 0[+1][-1]
- - ($signed({3'b000, O[+1][ 0]}) // – 2 * 0[+1][ 0]
+ - $signed({3'b000, O[+1][-1]}) // - 1 * 0[+1][-1]
+ - ($signed({3'b000, O[+1][ 0]}) // - 2 * 0[+1][ 0]
  << 1)
- - $signed({3'b000, O[+1][+1]}); // – 1 * 0[+1][+1]
+ - $signed({3'b000, O[+1][+1]}); // - 1 * 0[+1][+1]
 O[-1][-1] <= O[-1][0];
 O[-1][ 0] <= O[-1][+1];
 O[-1][+1] <= prev_row[31:24];
