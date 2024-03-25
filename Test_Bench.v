@@ -1,5 +1,18 @@
 `timescale 1ns / 1ps
 module testbench();
+parameter sizeOfWidth = 8;   // data width
+parameter sizeOfLengthReal = 307200; //total data bytes
+parameter INFILE  = "C:/Users/auroa/Desktop/acceleratortest/testPic1.hex";
+parameter OUTFILE  = "C:/Users/auroa/Desktop/acceleratortest/testPicout.hex";
+reg [7 : 0]   total_memory [0 : sizeOfLengthReal-1];// memory to store  8-bit data image
+reg [7:0] temp_BMP [0 :sizeOfLengthReal-1]; // Temp memory to store memory
+//wire read=1;
+//wire write=1;
+initial begin
+    $readmemh(INFILE,total_memory,0,sizeOfLengthReal-1); // read file from INFILE
+end
+
+
 parameter t_c = 10;
 parameter [22:0] mem_base = 23'h000000;
 parameter [22:0] sobel_reg_base = 23'h400000;
@@ -28,10 +41,10 @@ reg [3:0] cpu_sel_o;
 reg [22:0] cpu_adr_o;
 wire cpu_ack_i;
 reg [31:0] cpu_dat_o;
-wire[31:0] cpu_dat_i;
+wire[31:0] cpu_dat_i ;
 
 wire mem_stb_i;
-wire [3:0] mem_sel_i;
+//wire [3:0] mem_sel_i;
 reg mem_ack_o;
 reg [31:0] mem_dat_o;
 
@@ -40,7 +53,10 @@ reg arbiter_current_state, arbiter_next_state;
 reg sobel_gnt, cpu_gnt;
 
 wire sobel_sel, mem_sel;
-
+reg int_req;
+reg [21:0] loc;
+integer loc1=640;
+integer i;
 always begin // Clock generator
 clk = 1'b1; #(t_c/2);
 clk = 1'b0; #(t_c/2);
@@ -49,7 +65,7 @@ initial begin // Reset generator
 rst <= 1'b1;
 #(2.5*t_c) rst = 1'b0;
 end
-sobel duv ( .clk_i(clk), .rst_i(rst),
+sobel s( .clk_i(clk), .rst_i(rst),
  .cyc_o(sobel_cyc_o), .stb_o(sobel_stb_o),.we_o(sobel_we_o),
  .adr_o(sobel_adr_o), .ack_i(sobel_ack_i),
  .cyc_i(bus_cyc), .stb_i(sobel_stb_i),
@@ -100,18 +116,34 @@ cpu_sel_o = 4'b1111;
 cpu_cyc_o = 1'b1; cpu_stb_o = 1'b1; cpu_we_o = 1'b0;
 @(posedge clk); while (!cpu_ack_i) @(posedge clk);
 cpu_cyc_o = 1'b0; cpu_stb_o = 1'b0; cpu_we_o = 1'b0;
-if (cpu_dat_i[0]) disable loop;
+if (bus_dat[0]) begin
+//disable loop;
+$display("done");
+for(i=0;i<=640;i=i+1)
+temp_BMP[i] = 8'h00;
+for(i=0;i<640;i=i+1)
+temp_BMP[307199-i]=8'h00;
+ $writememh(OUTFILE,temp_BMP,0,sizeOfLengthReal-1); // Write file to OUTFILE
+$finish;
+end
 end
 end
 end
 
 always begin // Memory bus-functional model
 mem_ack_o = 1'b0;
-mem_dat_o = 32'h00000000;
+//mem_dat_o = 32'h00000000;
 @(posedge clk);
-while (!(bus_cyc && mem_stb_i)) @(posedge clk);
-if (!bus_we)
-mem_dat_o = 32'h00000000; // in place of read data
+while (!(bus_cyc && mem_stb_i))  @(posedge clk); 
+if (!bus_we)begin
+loc = bus_adr[21:0]-22'h008000;
+mem_dat_o = {total_memory[loc],total_memory[loc+1],total_memory[loc+2],total_memory[loc+3]};
+end // in place of read data
+else begin
+{temp_BMP[loc1],temp_BMP[loc1+1],temp_BMP[loc1+2],temp_BMP[loc1+3]}={bus_dat[31:24],bus_dat[23:16],bus_dat[15:8],bus_dat[7:0]};
+//$display("%h,%h,%h,%h ",temp_BMP[loc1],temp_BMP[loc1+1],temp_BMP[loc1+2],temp_BMP[loc1+3]);
+loc1 = loc1+4;
+end
 mem_ack_o = 1'b1;
 @(posedge clk);
 end
